@@ -2,8 +2,11 @@ package org.qsheker.benchmarkredis.api;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.qsheker.benchmarkredis.domain.CacheMode;
 import org.qsheker.benchmarkredis.domain.db.Product;
 import org.qsheker.benchmarkredis.domain.service.ProductService;
+import org.qsheker.benchmarkredis.domain.service.impl.DbProductService;
+import org.qsheker.benchmarkredis.domain.service.impl.ManualCachingProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +17,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProductController {
 
-    private final ProductService productService;
+    private final DbProductService productService;
+    private final ManualCachingProductService manualCachingProductService;
 
     @PostMapping
-    public ResponseEntity<Product> create(@RequestBody ProductCreateRequest request) {
-        log.info("Received create request: {}", request.getName());
+    public ResponseEntity<Product> create(
+            @RequestBody ProductCreateRequest request,
+            @RequestParam(value = "cacheMode", defaultValue = "NONE_CACHE")CacheMode cacheMode) {
+        log.info("Creating product with cacheMode={}", cacheMode);
+
+        ProductService service = modeResolver(cacheMode);
 
         Product product = Product.builder()
                 .name(request.getName())
@@ -26,34 +34,53 @@ public class ProductController {
                 .description(request.getDescription())
                 .build();
 
-        Product saved = productService.create(product);
+        Product saved = service.create(product);
         return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getById(@PathVariable Long id) {
-        log.info("Received get request for id={}", id);
-        Product product = productService.getById(id);
+    public ResponseEntity<Product> getById(
+            @PathVariable Long id,
+            @RequestParam(value = "cacheMode", defaultValue = "NONE_CACHE")CacheMode cacheMode) {
+        log.info("Received get request for id={}, cacheMode={}",id, cacheMode);
+
+        ProductService service = modeResolver(cacheMode);
+
+        Product product = service.getById(id);
         return ResponseEntity.ok(product);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> update(@PathVariable Long id, @RequestBody ProductUpdateRequest request) {
-        log.info("Received update request for id={}", id);
+    public ResponseEntity<Product> update(
+            @PathVariable Long id,
+            @RequestBody ProductUpdateRequest request,
+            @RequestParam(value = "cacheMode", defaultValue = "NONE_CACHE")CacheMode cacheMode) {
+        log.info("Received update request for id={}, cacheMode={}", id, cacheMode);
+
+        ProductService service = modeResolver(cacheMode);
 
         Product product = Product.builder()
                 .price(request.getPrice())
                 .description(request.getDescription())
                 .build();
 
-        Product updated = productService.update(id, product);
+        Product updated = service.update(id, product);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        log.info("Received delete request for id={}", id);
-        productService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id,
+                                       @RequestParam(value = "cacheMode", defaultValue = "NONE_CACHE")CacheMode cacheMode) {
+        log.info("Received delete request for id={}, cacheMode={}",id, cacheMode);
+        ProductService service = modeResolver(cacheMode);
+        service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private ProductService modeResolver(CacheMode cacheMode) {
+        return switch (cacheMode){
+            case NONE_CACHE -> productService;
+            case MANUAL -> manualCachingProductService;
+        };
     }
 }
