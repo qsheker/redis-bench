@@ -158,6 +158,15 @@ This gives a clear visualization of caching impact on response times over the te
 
 ---
 
+## Benchmark Results Screenshots
+
+**NONE_CACHE Mode**
+<img width="955" height="314" alt="image" src="https://github.com/user-attachments/assets/c9d2cdfa-0a9f-4a3b-a6b1-83b2bf467625" />
+
+**MANUAL Mode**
+<img width="1006" height="327" alt="image" src="https://github.com/user-attachments/assets/5616b3db-6d12-4678-acc6-6873d09ab1ff" />
+
+
 Notes
 
 * Each virtual user generates its own set of popular IDs to simulate realistic access patterns.
